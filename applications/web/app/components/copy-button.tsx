@@ -5,11 +5,13 @@ import { Button } from "~/components/ui/button";
 export function CopyButton({
   value,
   label = "Copy",
-  size = "sm",
+  variant = "yellow",
+  size = "md",
 }: {
   value: string;
   label?: string;
-  size?: "sm" | "icon";
+  variant?: "yellow" | "white" | "ink";
+  size?: "sm" | "md";
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -25,24 +27,14 @@ export function CopyButton({
       setCopied(true);
     } catch {
       // Clipboard access can be blocked (insecure context, permissions);
-      // the link is still visible and selectable.
+      // the text is still visible and selectable.
     }
   }
 
-  const Icon = copied ? Check : Copy;
-  const text = copied ? "Copied" : label;
-
   return (
-    <Button
-      type="button"
-      variant="outline"
-      size={size}
-      onClick={copy}
-      aria-label={size === "icon" ? `${text}: ${value}` : undefined}
-      title={size === "icon" ? text : undefined}
-    >
-      <Icon className={copied ? "text-success" : undefined} aria-hidden />
-      {size !== "icon" && <span aria-live="polite">{text}</span>}
+    <Button type="button" variant={variant} size={size} onClick={copy}>
+      {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+      <span aria-live="polite">{copied ? "Copied!" : label}</span>
     </Button>
   );
 }

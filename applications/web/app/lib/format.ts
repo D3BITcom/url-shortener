@@ -56,3 +56,12 @@ export function formatDay(day: string): string {
 export function displayUrl(url: string): string {
   return url.replace(/^https?:\/\//, "").replace(/\/$/, "");
 }
+
+/** "https://www.github.com/a/b" → "github.com" */
+export function domainOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return url;
+  }
+}

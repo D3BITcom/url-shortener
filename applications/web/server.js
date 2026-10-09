@@ -7,7 +7,6 @@
 import { existsSync } from "node:fs";
 import compression from "compression";
 import express from "express";
-import morgan from "morgan";
 
 const DEVELOPMENT = process.argv.includes("--dev");
 
@@ -39,11 +38,10 @@ if (DEVELOPMENT) {
   });
 } else {
   server.use(
-    "/assets",
+    "/r/assets",
     express.static("build/client/assets", { immutable: true, maxAge: "1y" }),
   );
-  server.use(express.static("build/client", { maxAge: "1h" }));
-  server.use(morgan("tiny"));
+  server.use("/r", express.static("build/client", { maxAge: "1h" }));
   server.use(await import("./build/server/index.js").then((mod) => mod.app));
 }
 

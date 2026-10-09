@@ -4,23 +4,25 @@ import type { ComponentProps } from "react";
 import { cn } from "~/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-md text-sm font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-60 [&_svg]:size-4 [&_svg]:shrink-0 cursor-pointer",
+  "inline-flex shrink-0 items-center justify-center gap-2 border-[3px] border-ink font-bold tracking-wider whitespace-nowrap uppercase no-underline transition-transform cursor-pointer active:translate-x-[2px] active:translate-y-[2px] disabled:cursor-not-allowed disabled:opacity-60 [&_svg]:size-[1.1em] [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
-        outline: "border bg-card hover:bg-muted",
-        ghost: "hover:bg-muted",
-        link: "text-primary underline-offset-4 hover:underline",
+        /** The one big call to action: red pill, teal rim, skewed. */
+        cta: "-skew-x-6 rounded-full border-4 border-teal bg-cta text-cta-ink shadow-[6px_6px_0_var(--color-ink)]",
+        yellow: "bg-paper text-ink shadow-hard",
+        white: "bg-white text-ink shadow-hard",
+        ink: "bg-ink text-lime shadow-[4px_4px_0_var(--color-hot)]",
+        danger: "bg-white text-error-edge shadow-hard",
+        link: "border-0 bg-transparent p-0 text-ink underline underline-offset-4 shadow-none normal-case tracking-normal",
       },
       size: {
-        default: "h-10 px-4",
-        sm: "h-8 px-3 text-xs",
-        lg: "h-12 px-6 text-base",
-        icon: "size-9",
+        sm: "min-h-11 px-3 text-xs",
+        md: "min-h-12 px-4 text-sm",
+        lg: "min-h-16 px-6 text-lg",
       },
     },
-    defaultVariants: { variant: "default", size: "default" },
+    defaultVariants: { variant: "white", size: "md" },
   },
 );
 

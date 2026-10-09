@@ -1,7 +1,7 @@
-import { CircleAlert } from "lucide-react";
 import type { ComponentProps } from "react";
 import { cn } from "~/lib/utils";
 
+/** The original's error box (lime, thick red border), kept and made readable. */
 export function ErrorAlert({
   className,
   children,
@@ -11,13 +11,24 @@ export function ErrorAlert({
     <div
       role="alert"
       className={cn(
-        "flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive-muted px-3 py-2.5 text-sm text-destructive",
+        "border-[6px] border-error-edge bg-error px-4 py-3 font-bold text-error-ink",
         className,
       )}
       {...props}
     >
-      <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-      <div>{children}</div>
+      {children}
     </div>
+  );
+}
+
+export function Notice({ className, ...props }: ComponentProps<"p">) {
+  return (
+    <p
+      className={cn(
+        "border-2 border-dashed border-ink bg-peach px-4 py-3 text-sm leading-relaxed",
+        className,
+      )}
+      {...props}
+    />
   );
 }

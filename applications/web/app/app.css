@@ -1,87 +1,102 @@
 @import "tailwindcss";
 
 /*
- * Design tokens (shadcn/ui convention). Components use semantic names such as
- * `bg-card` and `text-muted-foreground`, so theming happens here only.
+ * d3b.it/r design tokens: old-school web, cleaned up.
+ * Loud colors, hard shadows, dashed borders, mono type. Every text/background
+ * pair used by the components passes WCAG AA (4.5:1). Components use these
+ * semantic names; change the look here, not in components.
  */
-:root {
-  --background: oklch(0.985 0.002 260);
-  --foreground: oklch(0.21 0.02 265);
-  --card: oklch(1 0 0);
-  --card-foreground: var(--foreground);
-  --muted: oklch(0.96 0.005 260);
-  --muted-foreground: oklch(0.52 0.02 265);
-  --border: oklch(0.91 0.008 260);
-  --input: oklch(0.88 0.01 260);
-  --primary: oklch(0.51 0.2 268);
-  --primary-foreground: oklch(0.99 0 0);
-  --accent: oklch(0.95 0.025 268);
-  --accent-foreground: oklch(0.38 0.16 268);
-  --destructive: oklch(0.55 0.2 25);
-  --destructive-muted: oklch(0.97 0.02 25);
-  --success: oklch(0.55 0.13 155);
-  --ring: oklch(0.6 0.18 268);
-  --radius: 0.75rem;
-}
+@theme {
+  --font-mono: "Space Mono", ui-monospace, SFMono-Regular, monospace;
+  --font-pixel: "VT323", "Space Mono", ui-monospace, monospace;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: oklch(0.16 0.012 265);
-    --foreground: oklch(0.95 0.005 260);
-    --card: oklch(0.2 0.014 265);
-    --muted: oklch(0.25 0.014 265);
-    --muted-foreground: oklch(0.7 0.015 260);
-    --border: oklch(0.3 0.015 265);
-    --input: oklch(0.35 0.015 265);
-    --primary: oklch(0.68 0.16 268);
-    --primary-foreground: oklch(0.16 0.012 265);
-    --accent: oklch(0.28 0.05 268);
-    --accent-foreground: oklch(0.85 0.08 268);
-    --destructive: oklch(0.7 0.17 25);
-    --destructive-muted: oklch(0.27 0.05 25);
-    --success: oklch(0.72 0.14 155);
-    --ring: oklch(0.68 0.16 268);
-  }
-}
+  --color-ink: #1e1b4b; /* text, borders, shadows */
+  --color-paper: #fde047; /* yellow cards */
+  --color-grape: #7e22ce; /* dashed card borders */
+  --color-hot: #ef4444; /* hard shadows */
+  --color-cta: #dc2626; /* primary button */
+  --color-cta-ink: #fef08a; /* text on the primary button */
+  --color-teal: #2dd4bf;
+  --color-blue: #2563eb; /* input borders, focus */
+  --color-peach: #fed7aa; /* inputs, table heads */
+  --color-plum: #3b0764; /* input text */
+  --color-fuchsia: #a21caf; /* headings */
+  --color-leaf: #16a34a; /* wavy underlines */
+  --color-lime: #a3e635;
+  --color-lime-soft: #bef264; /* text on ink */
+  --color-pink: #ec4899;
+  --color-cyan: #67e8f9;
+  --color-violet: #6d28d9; /* result card */
+  --color-lilac: #f5d0fe; /* "private" text on ink */
+  --color-error: #84cc16; /* error box (lime) */
+  --color-error-ink: #1e40af;
+  --color-error-edge: #b91c1c;
 
-@theme inline {
-  --font-sans:
-    "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
-    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-muted: var(--destructive-muted);
-  --color-success: var(--success);
-  --color-ring: var(--ring);
-
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --shadow-hard: 4px 4px 0 var(--color-ink);
+  --shadow-hard-lg: 10px 10px 0 var(--color-ink);
+  --shadow-hot: 10px 10px 0 var(--color-hot);
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
   html {
-    color-scheme: light dark;
+    background: var(--color-ink);
   }
 
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply min-h-svh font-mono text-ink antialiased;
+    background: linear-gradient(
+      135deg,
+      var(--color-lime) 0%,
+      var(--color-pink) 52%,
+      var(--color-cyan) 100%
+    );
+  }
+
+  :focus-visible {
+    outline: 4px solid var(--color-blue);
+    outline-offset: 3px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation: none !important;
+      transition: none !important;
+    }
+  }
+}
+
+@layer utilities {
+  /* Windows-95 bevels, used only by the admin console. */
+  .bevel-out {
+    border: 2px solid;
+    border-color: #ffffff #404040 #404040 #ffffff;
+    background: #c0c0c0;
+  }
+  .bevel-in {
+    border: 2px solid;
+    border-color: #404040 #ffffff #ffffff #404040;
+  }
+
+  .wavy {
+    text-decoration: underline wavy var(--color-leaf);
+    text-decoration-thickness: 3px;
+    text-underline-offset: 0.3em;
+  }
+}
+
+@keyframes ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
   }
 }

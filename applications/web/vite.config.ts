@@ -5,6 +5,8 @@ import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig(({ isSsrBuild }) => ({
   envDir: "../..",
+  // Matches the router basename, so assets are served from /r/assets too.
+  base: "/r/",
   // The server bundle's entry is our Express app (server/app.ts), which
   // wraps React Router's request handler. See server.js.
   build: {

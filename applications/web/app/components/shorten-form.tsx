@@ -1,59 +1,111 @@
-import { ArrowRight, BarChart3, Loader2 } from "lucide-react";
-import { useEffect, useRef } from "react";
-import { Form, Link, useNavigation } from "react-router";
-import { CopyButton } from "~/components/copy-button";
+import { useEffect, useRef, useState } from "react";
+import { Form, useNavigation } from "react-router";
 import { ErrorAlert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
-import { Input } from "~/components/ui/input";
-import { displayUrl } from "~/lib/format";
+import { Input, Label, PrefixedInput } from "~/components/ui/input";
+import { PaperCard } from "~/components/ui/window";
 
-export type ShortenResult =
-  | {
-      ok: true;
-      created: boolean;
-      link: { code: string; shortLink: string; targetUrl: string };
-    }
-  | { ok: false; error: string; url: string };
+export interface ShortenFields {
+  url: string;
+  slug: string;
+  isPublic: boolean;
+}
 
-export function ShortenForm({ result }: { result: ShortenResult | undefined }) {
-  const navigation = useNavigation();
-  const submitting = navigation.state === "submitting";
-  const formRef = useRef<HTMLFormElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+export function ShortenForm({
+  error,
+  fields,
+  turnstileSiteKey,
+  shortLinkPrefix,
+}: {
+  error?: string;
+  fields?: ShortenFields;
+  turnstileSiteKey: string | null;
+  /** "d3b.it/r/" */
+  shortLinkPrefix: string;
+}) {
+  const submitting = useNavigation().state === "submitting";
+  const [isPublic, setIsPublic] = useState(fields?.isPublic ?? false);
+  const urlRef = useRef<HTMLInputElement>(null);
 
-  // Clear the input after a success; keep it (and focus it) after an error.
   useEffect(() => {
-    if (!result) return;
-    if (result.ok) formRef.current?.reset();
-    else inputRef.current?.focus();
-  }, [result]);
-
-  const error = result && !result.ok ? result : undefined;
+    if (!error) return;
+    urlRef.current?.focus();
+    // A Turnstile token is single-use: get a fresh one for the next attempt.
+    window.turnstile?.reset();
+  }, [error]);
 
   return (
-    <div className="flex flex-col gap-4">
-      <Form
-        ref={formRef}
-        method="post"
-        className="flex flex-col gap-3 sm:flex-row"
-      >
-        <label htmlFor="url" className="sr-only">
-          URL to shorten
-        </label>
-        <Input
-          ref={inputRef}
-          id="url"
-          name="url"
-          type="text"
-          inputMode="url"
-          autoComplete="off"
-          autoFocus
-          placeholder="Paste a long URL, e.g. example.com/some/long/path"
-          defaultValue={error?.url}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? "url-error" : undefined}
-          className="h-12 sm:flex-1"
-        />
+    <PaperCard className="mx-auto max-w-[640px]">
+      <h1 className="wavy text-center text-3xl leading-snug font-bold tracking-wide text-fuchsia italic sm:text-4xl">
+        ~*~ URL Shortener ~*~
+      </h1>
+      <p className="mt-5 mb-8 text-center text-[15px] leading-relaxed">
+        Paste a long link. Get a short one.
+        <br />
+        Watch the clicks roll in.
+      </p>
+
+      <Form method="post" className="flex flex-col gap-6">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="url">Long URL</Label>
+          <Input
+            ref={urlRef}
+            id="url"
+            name="url"
+            type="text"
+            inputMode="url"
+            autoComplete="off"
+            required
+            autoFocus
+            placeholder="example.com/some/very/long/path"
+            defaultValue={fields?.url}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "form-error" : undefined}
+          />
+        </div>
+
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="slug">
+            Custom ending{" "}
+            <span className="font-normal normal-case">(optional)</span>
+          </Label>
+          <PrefixedInput
+            prefix={shortLinkPrefix}
+            id="slug"
+            name="slug"
+            type="text"
+            autoComplete="off"
+            placeholder="ShOrTUr1"
+            maxLength={32}
+            defaultValue={fields?.slug}
+            aria-describedby="slug-hint"
+          />
+          <p id="slug-hint" className="text-[13px]">
+            4 or more letters, numbers, - or _. Leave it empty for a random one.
+          </p>
+        </div>
+
+        <div className="flex items-start gap-3.5 border-[3px] border-ink bg-white p-4 shadow-hard">
+          <input
+            id="isPublic"
+            name="isPublic"
+            type="checkbox"
+            checked={isPublic}
+            onChange={(e) => setIsPublic(e.target.checked)}
+            className="mt-0.5 size-7 flex-none accent-fuchsia"
+          />
+          <div className="flex flex-col gap-1">
+            <label htmlFor="isPublic" className="text-[15px] font-bold">
+              Show on the public leaderboard
+            </label>
+            <span className="text-[13px] leading-relaxed">
+              {isPublic
+                ? "Anyone can see this link's stats and it can appear in the Top 10."
+                : "Private: only you can see its stats, through your secret lobby link."}
+            </span>
+          </div>
+        </div>
+
         {/* Honeypot: hidden from people, but naive bots fill every field. */}
         <input
           type="text"
@@ -63,57 +115,43 @@ export function ShortenForm({ result }: { result: ShortenResult | undefined }) {
           aria-hidden
           className="hidden"
         />
-        <Button type="submit" size="lg" disabled={submitting}>
-          {submitting ? (
-            <>
-              <Loader2 className="animate-spin" aria-hidden />
-              Shortening…
-            </>
-          ) : (
-            <>
-              Shorten
-              <ArrowRight aria-hidden />
-            </>
-          )}
+
+        {turnstileSiteKey && <TurnstileWidget siteKey={turnstileSiteKey} />}
+
+        {error && <ErrorAlert id="form-error">{error}</ErrorAlert>}
+
+        <Button type="submit" variant="cta" size="lg" disabled={submitting}>
+          {submitting ? "★ SHORTENING... ★" : "★ SHORTEN IT ★"}
         </Button>
       </Form>
+    </PaperCard>
+  );
+}
 
-      {error && <ErrorAlert id="url-error">{error.error}</ErrorAlert>}
+declare global {
+  interface Window {
+    turnstile?: { reset: () => void };
+  }
+}
 
-      {result?.ok && (
-        <div className="flex flex-col gap-3 rounded-lg border border-primary/25 bg-accent p-4 sm:flex-row sm:items-center">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs font-medium text-accent-foreground">
-              {result.created
-                ? "Your short link is ready"
-                : "This URL was already shortened"}
-            </p>
-            <a
-              href={result.link.shortLink}
-              target="_blank"
-              rel="noreferrer"
-              className="block truncate text-lg font-semibold text-foreground hover:underline"
-            >
-              {displayUrl(result.link.shortLink)}
-            </a>
-            <p
-              className="truncate text-xs text-muted-foreground"
-              title={result.link.targetUrl}
-            >
-              → {result.link.targetUrl}
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <CopyButton value={result.link.shortLink} />
-            <Button asChild variant="ghost" size="sm">
-              <Link to={`/links/${result.link.code}`}>
-                <BarChart3 aria-hidden />
-                Stats
-              </Link>
-            </Button>
-          </div>
-        </div>
-      )}
-    </div>
+/**
+ * Cloudflare Turnstile in "interaction-only" mode: invisible for almost
+ * everyone, a checkbox only when Cloudflare is unsure. It adds a hidden
+ * `cf-turnstile-response` field to the form.
+ */
+function TurnstileWidget({ siteKey }: { siteKey: string }) {
+  return (
+    <>
+      <script
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+        async
+        defer
+      />
+      <div
+        className="cf-turnstile"
+        data-sitekey={siteKey}
+        data-appearance="interaction-only"
+      />
+    </>
   );
 }

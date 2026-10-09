@@ -1,6 +1,7 @@
 import { redirect } from "react-router";
 import { getContainer } from "~/.server/container";
-import type { Route } from "./+types/s.$code";
+import { logger } from "~/.server/logger";
+import type { Route } from "./+types/$code";
 
 export async function loader({ params, request, context }: Route.LoaderArgs) {
   const { shortUrls, analytics } = await getContainer();
@@ -17,7 +18,12 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
         userAgent: request.headers.get("user-agent"),
         referrer: request.headers.get("referer"),
       })
-      .catch((error) => console.error("Failed to record click", error));
+      .catch((error) =>
+        logger.error(
+          { err: error, code: shortUrl.code },
+          "Failed to record click",
+        ),
+      );
   }
 
   return redirect(shortUrl.targetUrl, {

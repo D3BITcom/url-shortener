@@ -1,7 +1,7 @@
 import type { Config } from "@react-router/dev/config";
 
 export default {
-  // Config options...
-  // Server-side render by default, to enable SPA mode set this to `false`
   ssr: true,
+  // Everything lives under d3b.it/r; nginx sends only /r/ to this app.
+  basename: "/r",
 } satisfies Config;

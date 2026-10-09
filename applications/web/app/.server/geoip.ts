@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { NullGeoResolver, type GeoResolver } from "@url-shortener/engine";
 import maxmind, { type CountryResponse, type Reader } from "maxmind";
+import { logger } from "./logger";
 
 /**
  * Offline IP-to-country lookup from an .mmdb file (DB-IP Lite or MaxMind
@@ -20,8 +21,9 @@ export async function createGeoResolver(
   dbPath: string | undefined,
 ): Promise<GeoResolver> {
   if (!dbPath || !existsSync(dbPath)) {
-    console.warn(
-      `[geoip] No database at ${dbPath ?? "(GEOIP_DB_PATH unset)"}; countries will show as Unknown. Run \`pnpm geoip:download\`.`,
+    logger.warn(
+      { dbPath: dbPath ?? null },
+      "No GeoIP database; countries will show as Unknown. Run `pnpm geoip:download`.",
     );
     return new NullGeoResolver();
   }

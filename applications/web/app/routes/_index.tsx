@@ -1,103 +1,138 @@
-import { DomainError } from "@url-shortener/engine";
-import { BarChart3, Link2, ShieldCheck } from "lucide-react";
-import { data, useActionData } from "react-router";
+import { data, useActionData, useLoaderData } from "react-router";
 import { getContainer } from "~/.server/container";
-import { ShortenForm, type ShortenResult } from "~/components/shorten-form";
+import { isExpected, toUserMessage } from "~/.server/errors";
+import { logger } from "~/.server/logger";
+import { ShortenForm, type ShortenFields } from "~/components/shorten-form";
+import { ShortenResult, type CreatedLink } from "~/components/shorten-result";
 import type { Route } from "./+types/_index";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "URL Shortener" },
-    { name: "description", content: "Shorten links and see who clicks them." },
+    { title: "d3b.it/r ~ URL Shortener" },
+    {
+      name: "description",
+      content: "Short links with real, privacy-friendly stats.",
+    },
   ];
 }
 
-// Controller: parse → guard → call the service → map to a view model.
-export async function action({ request, context }: Route.ActionArgs) {
-  const { shortUrls, creationLimiter, shortLinkFor } = await getContainer();
-  const form = await request.formData();
-  const url = String(form.get("url") ?? "");
+export async function loader() {
+  const { turnstileSiteKey, shortLinkPrefix } = await getContainer();
+  return { turnstileSiteKey, shortLinkPrefix };
+}
 
+type ActionResult =
+  | { ok: true; link: CreatedLink; keyLink: string; newOwner: boolean }
+  | { ok: false; error: string; fields: ShortenFields };
+
+// Controller: parse → guard (honeypot, rate limit, human check) → identify
+// the owner → call the service → map to a view model.
+export async function action({ request, context }: Route.ActionArgs) {
+  const container = await getContainer();
+  const form = await request.formData();
+  const fields: ShortenFields = {
+    url: String(form.get("url") ?? ""),
+    slug: String(form.get("slug") ?? ""),
+    isPublic: form.get("isPublic") === "on",
+  };
   const fail = (error: string, status: number, headers?: HeadersInit) =>
-    data<ShortenResult>({ ok: false, error, url }, { status, headers });
+    data<ActionResult>({ ok: false, error, fields }, { status, headers });
 
   if (form.get("website")) {
+    logger.warn({ reason: "honeypot" }, "Link creation blocked");
     return fail("Something went wrong. Please try again.", 400);
   }
 
-  const limit = creationLimiter.consume(context.clientIp ?? "unknown");
+  const limit = container.limiters.createLink.consume(
+    context.clientIp ?? "unknown",
+  );
   if (!limit.allowed) {
+    logger.warn({ reason: "rate-limit" }, "Link creation blocked");
     return fail(
-      `Too many links created. Please try again in ${limit.retryAfterSeconds} seconds.`,
+      `Whoa, slow down! Try again in ${limit.retryAfterSeconds} seconds.`,
       429,
       { "Retry-After": String(limit.retryAfterSeconds) },
     );
   }
 
+  const token = form.get("cf-turnstile-response");
+  if (
+    !(await container.humanVerifier.verify(
+      token ? String(token) : null,
+      context.clientIp,
+    ))
+  ) {
+    logger.warn({ reason: "turnstile" }, "Link creation blocked");
+    return fail("We couldn't confirm you're a human. Please try again.", 400);
+  }
+
+  // The owner is created on the first link and remembered in a cookie.
+  const cookieSecret = await container.cookies.owner.parse(
+    request.headers.get("Cookie"),
+  );
+  const session = await container.owners.authenticateOrCreate(
+    typeof cookieSecret === "string" ? cookieSecret : null,
+  );
+  const headers = session.created
+    ? { "Set-Cookie": await container.cookies.owner.serialize(session.secret) }
+    : undefined;
+
   try {
-    const { shortUrl, created } = await shortUrls.shorten(url);
-    return data<ShortenResult>({
-      ok: true,
-      created,
-      link: {
-        code: shortUrl.code,
-        shortLink: shortLinkFor(shortUrl.code),
-        targetUrl: shortUrl.targetUrl,
-      },
+    const shortUrl = await container.shortUrls.shorten({
+      ...fields,
+      ownerId: session.owner.id,
     });
+    logger.info(
+      {
+        code: shortUrl.code,
+        isPublic: shortUrl.isPublic,
+        custom: shortUrl.isCustomSlug,
+      },
+      "Link created",
+    );
+    return data<ActionResult>(
+      {
+        ok: true,
+        link: {
+          code: shortUrl.code,
+          shortLink: container.shortLinkFor(shortUrl.code),
+          targetUrl: shortUrl.targetUrl,
+          isPublic: shortUrl.isPublic,
+        },
+        keyLink: container.keyLinkFor(session.secret),
+        newOwner: session.created,
+      },
+      { headers },
+    );
   } catch (error) {
-    if (error instanceof DomainError) return fail(error.message, 400);
-    console.error("Failed to shorten URL", error);
-    return fail("Something went wrong on our side. Please try again.", 500);
+    return fail(
+      toUserMessage(error, "shorten"),
+      isExpected(error) ? 400 : 500,
+      headers,
+    );
   }
 }
 
 export default function Index() {
+  const { turnstileSiteKey, shortLinkPrefix } = useLoaderData<typeof loader>();
   const result = useActionData<typeof action>();
 
+  if (result?.ok) {
+    return (
+      <ShortenResult
+        link={result.link}
+        keyLink={result.keyLink}
+        newOwner={result.newOwner}
+      />
+    );
+  }
+
   return (
-    <div className="mx-auto flex max-w-2xl flex-col gap-10 py-10 sm:py-16">
-      <div className="flex flex-col gap-3 text-center">
-        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
-          Short links, real insights
-        </h1>
-        <p className="text-muted-foreground">
-          Paste a long URL to get a short link, then see where your clicks come
-          from.
-        </p>
-      </div>
-
-      <ShortenForm result={result} />
-
-      <ul className="grid gap-4 text-sm sm:grid-cols-3">
-        <Feature icon={Link2} title="Short & unguessable">
-          Random 7-character codes, no look-alike characters.
-        </Feature>
-        <Feature icon={BarChart3} title="Click analytics">
-          Countries, devices, referrers and daily trends.
-        </Feature>
-        <Feature icon={ShieldCheck} title="Privacy-friendly">
-          No raw IPs stored. Bots are filtered out of your numbers.
-        </Feature>
-      </ul>
-    </div>
-  );
-}
-
-function Feature({
-  icon: Icon,
-  title,
-  children,
-}: {
-  icon: typeof Link2;
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <li className="flex flex-col gap-1.5 rounded-lg p-3">
-      <Icon className="size-5 text-primary" aria-hidden />
-      <p className="font-medium">{title}</p>
-      <p className="text-muted-foreground">{children}</p>
-    </li>
+    <ShortenForm
+      error={result?.error}
+      fields={result?.fields}
+      turnstileSiteKey={turnstileSiteKey}
+      shortLinkPrefix={shortLinkPrefix}
+    />
   );
 }

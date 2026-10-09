@@ -1,13 +1,13 @@
 import { getContainer } from "~/.server/container";
+import { logger } from "~/.server/logger";
 
 /** Liveness probe for Docker / uptime checks: 200 only if the database answers. */
 export async function loader() {
   try {
-    const { shortUrls } = await getContainer();
-    await shortUrls.list(1);
+    await (await getContainer()).checkDatabase();
     return Response.json({ status: "ok" });
   } catch (error) {
-    console.error("Health check failed", error);
+    logger.error({ err: error }, "Health check failed");
     return Response.json({ status: "error" }, { status: 503 });
   }
 }
