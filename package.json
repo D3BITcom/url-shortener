@@ -10,7 +10,11 @@
     "clean:deep": "pnpm run clean && pnpm -r exec rm -rf node_modules && rm -rf node_modules",
     "test": "turbo test",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:migrate": "pnpm --filter @url-shortener/database exec prisma migrate dev",
+    "db:deploy": "pnpm --filter @url-shortener/database exec prisma migrate deploy",
+    "db:studio": "pnpm --filter @url-shortener/database exec prisma studio",
+    "db:generate": "turbo generate"
   },
   "packageManager": "pnpm@10.20.0",
   "devDependencies": {
