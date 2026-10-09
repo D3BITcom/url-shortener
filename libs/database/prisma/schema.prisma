@@ -12,15 +12,35 @@ datasource db {
   provider = "sqlite"
 }
 
-model ShortUrl {
-  id        String   @id @default(cuid())
-  code      String   @unique
-  targetUrl String
-  createdAt DateTime @default(now())
-  clicks    Click[]
+// An anonymous link owner. Whoever holds the secret key owns the links; only
+// the key's SHA-256 is stored. `accountId` will link it to a D3BIT account.
+model Owner {
+  id         String     @id @default(cuid())
+  secretHash String     @unique
+  accountId  String?    @unique
+  createdAt  DateTime   @default(now())
+  shortUrls  ShortUrl[]
+}
 
-  @@index([targetUrl]) // reuse an existing link for the same URL
-  @@index([createdAt]) // newest-first listing
+model ShortUrl {
+  id           String    @id @default(cuid())
+  /// As created and displayed, e.g. "ShOrTUr1".
+  code         String
+  /// lower(code): uniqueness and lookups ignore case, so "Promo" and "promo" can't both exist.
+  codeKey      String    @unique
+  targetUrl    String
+  createdAt    DateTime  @default(now())
+  ownerId      String?
+  owner        Owner?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  isPublic     Boolean   @default(false)
+  isCustomSlug Boolean   @default(false)
+  /// Set by an admin: still redirects, but leaves the leaderboard and public stats.
+  hiddenAt     DateTime?
+  clicks       Click[]
+
+  @@index([ownerId, createdAt]) // "my links"
+  @@index([createdAt]) // admin listing, newest first
+  @@index([isPublic, hiddenAt]) // leaderboard candidates
 }
 
 // One row per redirect (an event log), so new breakdowns are new queries

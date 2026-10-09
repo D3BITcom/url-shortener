@@ -2,6 +2,7 @@ import type {
   ClickRepository,
   ClickStats,
   CountByKey,
+  LeaderboardRow,
   NewClick,
 } from "@url-shortener/engine";
 import type { PrismaClient } from "./generated/prisma/client";
@@ -63,6 +64,63 @@ export class PrismaClickRepository implements ClickRepository {
       byDevice,
       byReferrer,
     };
+  }
+
+  /**
+   * Portable two-step query instead of raw SQL (whose date/boolean encoding
+   * differs per driver): eligible links, then their distinct (link, visitor)
+   * pairs. Fine for this scale; a daily rollup table would replace it at volume.
+   */
+  async leaderboard({
+    sinceDay,
+    createdBefore,
+    limit,
+  }: {
+    sinceDay: string | null;
+    createdBefore: Date;
+    limit: number;
+  }): Promise<LeaderboardRow[]> {
+    const candidates = await this.prisma.shortUrl.findMany({
+      where: {
+        isPublic: true,
+        hiddenAt: null,
+        createdAt: { lt: createdBefore },
+      },
+      select: { id: true, code: true, targetUrl: true, createdAt: true },
+    });
+    if (candidates.length === 0) return [];
+
+    const pairs = await this.prisma.click.groupBy({
+      by: ["shortUrlId", "visitorId"],
+      where: {
+        shortUrlId: { in: candidates.map((c) => c.id) },
+        isBot: false,
+        ...(sinceDay && { day: { gte: sinceDay } }),
+      },
+    });
+
+    const visitors = new Map<string, number>();
+    for (const pair of pairs) {
+      visitors.set(pair.shortUrlId, (visitors.get(pair.shortUrlId) ?? 0) + 1);
+    }
+
+    return (
+      candidates
+        .map((c) => ({ ...c, uniqueVisitors: visitors.get(c.id) ?? 0 }))
+        .filter((c) => c.uniqueVisitors > 0)
+        // Ties go to the older link: it got there first.
+        .sort(
+          (a, b) =>
+            b.uniqueVisitors - a.uniqueVisitors ||
+            a.createdAt.getTime() - b.createdAt.getTime(),
+        )
+        .slice(0, limit)
+        .map(({ code, targetUrl, uniqueVisitors }) => ({
+          code,
+          targetUrl,
+          uniqueVisitors,
+        }))
+    );
   }
 
   private async topBy(
