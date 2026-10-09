@@ -1,0 +1,34 @@
+# /etc/nginx/sites-available/url-shortener
+# TLS certificates via certbot: sudo certbot --nginx -d your-domain.example
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name your-domain.example;
+    return 301 https://$host$request_uri;
+}
+
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name your-domain.example;
+
+    # Managed by certbot
+    ssl_certificate     /etc/letsencrypt/live/your-domain.example/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/your-domain.example/privkey.pem;
+
+    # The app only accepts small form posts; reject anything bigger early.
+    client_max_body_size 16k;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;   # HOST_PORT from deploy/.env
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        # nginx appends the real client address. The app trusts exactly one
+        # hop (TRUST_PROXY=true), so it reads this appended value and ignores
+        # anything a client put in the header itself.
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}

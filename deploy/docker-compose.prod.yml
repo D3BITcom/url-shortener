@@ -1,0 +1,23 @@
+# Production on a VPS behind nginx. See deploy/README.md.
+#   docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d --build
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    # Loopback only: the app must be reachable through nginx, never directly,
+    # otherwise clients could bypass the proxy and spoof X-Forwarded-For.
+    ports:
+      - "127.0.0.1:${HOST_PORT:-3000}:3000"
+    environment:
+      - PUBLIC_URL=${PUBLIC_URL:?set PUBLIC_URL, e.g. https://sho.rt}
+      - ANALYTICS_SALT=${ANALYTICS_SALT:?set ANALYTICS_SALT (openssl rand -hex 32)}
+      - TRUST_PROXY=true
+      - RATE_LIMIT_MAX=${RATE_LIMIT_MAX:-10}
+      - RATE_LIMIT_WINDOW_SECONDS=${RATE_LIMIT_WINDOW_SECONDS:-60}
+    volumes:
+      - app-data:/app/data
+
+volumes:
+  app-data:
