@@ -1,6 +1,7 @@
 import { createRequestHandler } from "@react-router/express";
 import express from "express";
 import "react-router";
+import { getContainer } from "~/.server/container";
 
 declare module "react-router" {
   interface AppLoadContext {
@@ -11,6 +12,11 @@ declare module "react-router" {
 
 /** Form posts only carry a URL; anything bigger is abuse, not a link. */
 const MAX_BODY_BYTES = 16 * 1024;
+
+// Build services (and validate the environment) when this module loads, so a
+// bad config stops the production server at boot with a readable message.
+// In dev the module loads lazily, so the same error shows on the first request.
+await getContainer();
 
 export const app = express();
 

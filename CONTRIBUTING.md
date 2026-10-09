@@ -5,15 +5,14 @@
 ```bash
 nvm use                # Node 22 (.nvmrc)
 pnpm install
-cp .env.example .env   # then set ANALYTICS_SALT=$(openssl rand -hex 32)
-pnpm db:deploy         # create data/app.db from the migrations
+cp .env.example .env
 pnpm geoip:download    # optional: country lookups
-pnpm dev               # http://localhost:3000
+pnpm dev               # applies migrations, then http://localhost:3000
 ```
 
 | Command                           | What it does                                             |
 | --------------------------------- | -------------------------------------------------------- |
-| `pnpm dev`                        | Dev server with HMR                                      |
+| `pnpm dev`                        | Apply migrations, then dev server with HMR               |
 | `pnpm test`                       | All test suites (Vitest)                                 |
 | `pnpm typecheck`                  | TypeScript across all packages                           |
 | `pnpm format`                     | Prettier (CI runs `format:check`)                        |

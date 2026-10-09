@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "turbo dev",
+    "dev": "pnpm db:deploy && turbo dev",
     "build": "turbo build",
     "typecheck": "turbo typecheck",
     "clean": "turbo run clean && rm -rf .turbo",

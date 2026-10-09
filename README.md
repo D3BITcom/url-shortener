@@ -33,10 +33,9 @@ Requires Node 22 and pnpm 10.
 
 ```bash
 pnpm install
-cp .env.example .env    # set ANALYTICS_SALT=$(openssl rand -hex 32)
-pnpm db:deploy          # creates data/app.db
+cp .env.example .env
 pnpm geoip:download     # optional, enables country stats
-pnpm dev
+pnpm dev                # applies migrations, then starts the dev server
 ```
 
 Open `http://localhost:3000`
