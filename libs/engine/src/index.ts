@@ -2,7 +2,6 @@ export {
   DomainError,
   DuplicateShortCodeError,
   InvalidUrlError,
-  RateLimitedError,
 } from "./shared/errors";
 
 export type { ShortUrl, ShortUrlSummary } from "./short-url/short-url";

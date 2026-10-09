@@ -1,98 +1,103 @@
-import { Form, useActionData } from "react-router";
+import { DomainError } from "@url-shortener/engine";
+import { BarChart3, Link2, ShieldCheck } from "lucide-react";
+import { data, useActionData } from "react-router";
+import { getContainer } from "~/.server/container";
+import { ShortenForm, type ShortenResult } from "~/components/shorten-form";
 import type { Route } from "./+types/_index";
-import {
-  baseUrl,
-  shortenedUrls,
-  generateShortCode,
-} from "@url-shortener/engine";
-
-export function loader() {
-  return {
-    baseUrl: baseUrl ? baseUrl + "/s/" : "-",
-  };
-}
-
-export async function action({ request }: Route.ActionArgs) {
-  const formData = await request.formData();
-  const url = formData.get("url") as string;
-
-  if (!url) {
-    return { error: "URL is required" };
-  }
-
-  const shortCode = generateShortCode();
-
-  shortenedUrls.set(shortCode, url);
-
-  return {
-    shortenedUrl: `${baseUrl}/s/${shortCode}`,
-  };
-}
 
 export function meta({}: Route.MetaArgs) {
   return [
     { title: "URL Shortener" },
-    { name: "description", content: "Shorten your URLs quickly and easily" },
+    { name: "description", content: "Shorten links and see who clicks them." },
   ];
 }
 
-export default function Index({ loaderData }: Route.ComponentProps) {
-  const { baseUrl } = loaderData;
-  const actionData = useActionData<typeof action>();
+// Controller: parse → guard → call the service → map to a view model.
+export async function action({ request, context }: Route.ActionArgs) {
+  const { shortUrls, creationLimiter, shortLinkFor } = await getContainer();
+  const form = await request.formData();
+  const url = String(form.get("url") ?? "");
+
+  const fail = (error: string, status: number, headers?: HeadersInit) =>
+    data<ShortenResult>({ ok: false, error, url }, { status, headers });
+
+  if (form.get("website")) {
+    return fail("Something went wrong. Please try again.", 400);
+  }
+
+  const limit = creationLimiter.consume(context.clientIp ?? "unknown");
+  if (!limit.allowed) {
+    return fail(
+      `Too many links created. Please try again in ${limit.retryAfterSeconds} seconds.`,
+      429,
+      { "Retry-After": String(limit.retryAfterSeconds) },
+    );
+  }
+
+  try {
+    const { shortUrl, created } = await shortUrls.shorten(url);
+    return data<ShortenResult>({
+      ok: true,
+      created,
+      link: {
+        code: shortUrl.code,
+        shortLink: shortLinkFor(shortUrl.code),
+        targetUrl: shortUrl.targetUrl,
+      },
+    });
+  } catch (error) {
+    if (error instanceof DomainError) return fail(error.message, 400);
+    console.error("Failed to shorten URL", error);
+    return fail("Something went wrong on our side. Please try again.", 500);
+  }
+}
+
+export default function Index() {
+  const result = useActionData<typeof action>();
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-lime-400 via-pink-500 to-cyan-300">
-      <div className="bg-yellow-300 p-12 rounded-none border-8 border-dashed border-purple-600 w-full max-w-lg rotate-1 shadow-2xl shadow-red-500">
-        <h1 className="text-4xl font-mono italic text-center mb-8 text-fuchsia-600 underline decoration-wavy decoration-green-500 tracking-widest">
-          ~*~ URL Shortener ~*~
+    <div className="mx-auto flex max-w-2xl flex-col gap-10 py-10 sm:py-16">
+      <div className="flex flex-col gap-3 text-center">
+        <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+          Short links, real insights
         </h1>
-
-        <Form method="post" className="flex flex-col gap-6">
-          <input
-            type="text"
-            name="url"
-            placeholder="Enter your URL here..."
-            required
-            className="w-full px-4 py-3 text-base bg-orange-200 border-4 border-blue-600 text-purple-800 placeholder-red-400 rounded focus:outline-none"
-          />
-
-          <div>
-            <button
-              type="submit"
-              className="w-full px-4 py-3 text-base bg-red-500 hover:bg-lime-500 text-yellow-200 border-4 border-teal-400 rounded-full skew-x-3 cursor-pointer"
-            >
-              ★ SHORTEN IT ★
-            </button>
-            <p className="text-sm text-indigo-800 mt-3 text-center font-bold bg-cyan-200 p-2 border-2 border-dotted border-orange-500">
-              Your shortened URL will start with {baseUrl}
-            </p>
-          </div>
-        </Form>
-
-        {actionData?.shortenedUrl && (
-          <div className="mt-8 p-4 bg-violet-400 rounded-3xl border-4 border-double border-yellow-500 -rotate-1">
-            <p className="text-lg text-lime-300 mb-2 font-black uppercase">
-              Your shortened URL:
-            </p>
-            <a
-              href={actionData.shortenedUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-red-200 break-all font-mono text-xl hover:text-blue-900 bg-pink-600 p-2 block"
-            >
-              {actionData.shortenedUrl}
-            </a>
-          </div>
-        )}
-
-        {actionData?.error && (
-          <div className="mt-8 p-4 bg-lime-500 rounded-none border-8 border-solid border-red-700">
-            <p className="text-2xl text-blue-800 font-black">
-              {actionData.error}
-            </p>
-          </div>
-        )}
+        <p className="text-muted-foreground">
+          Paste a long URL to get a short link, then see where your clicks come
+          from.
+        </p>
       </div>
-    </main>
+
+      <ShortenForm result={result} />
+
+      <ul className="grid gap-4 text-sm sm:grid-cols-3">
+        <Feature icon={Link2} title="Short & unguessable">
+          Random 7-character codes, no look-alike characters.
+        </Feature>
+        <Feature icon={BarChart3} title="Click analytics">
+          Countries, devices, referrers and daily trends.
+        </Feature>
+        <Feature icon={ShieldCheck} title="Privacy-friendly">
+          No raw IPs stored. Bots are filtered out of your numbers.
+        </Feature>
+      </ul>
+    </div>
+  );
+}
+
+function Feature({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: typeof Link2;
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <li className="flex flex-col gap-1.5 rounded-lg p-3">
+      <Icon className="size-5 text-primary" aria-hidden />
+      <p className="font-medium">{title}</p>
+      <p className="text-muted-foreground">{children}</p>
+    </li>
   );
 }

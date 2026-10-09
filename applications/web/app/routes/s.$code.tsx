@@ -1,15 +1,42 @@
 import { redirect } from "react-router";
+import { getContainer } from "~/.server/container";
 import type { Route } from "./+types/s.$code";
-import { shortenedUrls } from "@url-shortener/engine";
 
-export function loader({ params }: Route.LoaderArgs) {
-  const { code } = params;
-
-  const url = shortenedUrls.get(code);
-
-  if (!url) {
-    throw new Response("Not Found", { status: 404 });
+export async function loader({ params, request, context }: Route.LoaderArgs) {
+  const { shortUrls, analytics } = await getContainer();
+  const shortUrl = await shortUrls.resolve(params.code);
+  if (!shortUrl) {
+    throw new Response("Link not found", { status: 404 });
   }
 
-  return redirect(url);
+  if (!isPrefetch(request)) {
+    // Fire-and-forget: analytics must never slow down or break a redirect.
+    analytics
+      .recordClick(shortUrl, {
+        ip: context.clientIp,
+        userAgent: request.headers.get("user-agent"),
+        referrer: request.headers.get("referer"),
+      })
+      .catch((error) => console.error("Failed to record click", error));
+  }
+
+  return redirect(shortUrl.targetUrl, {
+    status: 302,
+    // A cached redirect would skip us, and the click would never be counted.
+    headers: { "Cache-Control": "private, no-store" },
+  });
+}
+
+// The loader always redirects or throws, so this never renders. Having a
+// component makes this a UI route rather than a resource route, so a dead
+// link shows the app's styled 404 page instead of plain text.
+export default function ShortLinkRedirect() {
+  return null;
+}
+
+/** Browsers prefetch links speculatively; those aren't real clicks. */
+function isPrefetch(request: Request): boolean {
+  const purpose =
+    request.headers.get("sec-purpose") ?? request.headers.get("purpose") ?? "";
+  return purpose.includes("prefetch");
 }

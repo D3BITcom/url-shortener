@@ -16,16 +16,6 @@ export class InvalidUrlError extends DomainError {
   readonly code = "INVALID_URL";
 }
 
-export class RateLimitedError extends DomainError {
-  readonly code = "RATE_LIMITED";
-
-  constructor(readonly retryAfterSeconds: number) {
-    super(
-      `Too many links created. Please try again in ${retryAfterSeconds} seconds.`,
-    );
-  }
-}
-
 /**
  * Part of the repository contract: thrown by `ShortUrlRepository.create` when
  * the code is already taken, so the service can retry with a new code.
