@@ -7,10 +7,15 @@
     "build": "turbo build",
     "typecheck": "turbo typecheck",
     "clean": "turbo run clean && rm -rf .turbo",
-    "clean:deep": "pnpm run clean && pnpm -r exec rm -rf node_modules && rm -rf node_modules"
+    "clean:deep": "pnpm run clean && pnpm -r exec rm -rf node_modules && rm -rf node_modules",
+    "test": "turbo test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "packageManager": "pnpm@10.20.0",
   "devDependencies": {
-    "turbo": "^2.7.4"
+    "prettier": "^3.9.9",
+    "turbo": "^2.7.4",
+    "vitest": "^5.0.2"
   }
 }

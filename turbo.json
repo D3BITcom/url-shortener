@@ -12,6 +12,9 @@
     "typecheck": {},
     "clean": {
       "cache": false
+    },
+    "test": {
+      "outputs": []
     }
   }
 }
