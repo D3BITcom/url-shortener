@@ -1,3 +1,5 @@
+# Local / reviewer setup: `docker compose up --build`, then open
+# http://localhost:3000. For a public server, see deploy/.
 services:
   web:
     build:
@@ -6,5 +8,11 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
       - PUBLIC_URL=http://localhost:3000
+      # Fine for a local demo; set a real secret anywhere public.
+      - ANALYTICS_SALT=${ANALYTICS_SALT:-local-docker-demo-salt-not-secret}
+    volumes:
+      - app-data:/app/data
+
+volumes:
+  app-data:

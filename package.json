@@ -14,7 +14,8 @@
     "db:migrate": "pnpm --filter @url-shortener/database exec prisma migrate dev",
     "db:deploy": "pnpm --filter @url-shortener/database exec prisma migrate deploy",
     "db:studio": "pnpm --filter @url-shortener/database exec prisma studio",
-    "db:generate": "turbo generate"
+    "db:generate": "turbo generate",
+    "geoip:download": "sh scripts/download-geoip.sh data/dbip-country-lite.mmdb"
   },
   "packageManager": "pnpm@10.20.0",
   "devDependencies": {

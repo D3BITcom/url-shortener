@@ -5,4 +5,5 @@ export default [
   route("links", "routes/links._index.tsx"),
   route("links/:code", "routes/links.$code.tsx"),
   route("s/:code", "routes/s.$code.tsx"),
+  route("healthz", "routes/healthz.ts"),
 ] satisfies RouteConfig;

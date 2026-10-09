@@ -12,6 +12,10 @@ export default defineConfig(({ isSsrBuild }) => ({
   },
   plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
   ssr: {
+    // Workspace libs ship TypeScript source, so they're bundled into the server build.
     noExternal: ["@url-shortener/engine", "@url-shortener/database"],
+    // Native addons can't be bundled; they load from node_modules at runtime,
+    // which is why `better-sqlite3` is also a direct dependency of this app.
+    external: ["better-sqlite3"],
   },
 }));
