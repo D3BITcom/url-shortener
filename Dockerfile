@@ -46,6 +46,6 @@ USER node
 
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s \
-  CMD wget -qO- "http://127.0.0.1:${PORT}/healthz" || exit 1
+  CMD wget -qO- "http://127.0.0.1:${PORT}/r/healthz" || exit 1
 
 ENTRYPOINT ["sh", "/app/docker-entrypoint.sh"]

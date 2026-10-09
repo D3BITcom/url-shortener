@@ -1,5 +1,5 @@
 # Local / reviewer setup: `docker compose up --build`, then open
-# http://localhost:3000. For a public server, see deploy/.
+# http://localhost:3000/r. For the real server, see deploy/.
 services:
   web:
     build:
@@ -9,10 +9,19 @@ services:
       - "3000:3000"
     environment:
       - PUBLIC_URL=http://localhost:3000
-      # Fine for a local demo; set a real secret anywhere public.
+      # Demo-only secrets so this runs with zero setup. Never reuse them anywhere public.
       - ANALYTICS_SALT=${ANALYTICS_SALT:-local-docker-demo-salt-not-secret}
+      - COOKIE_SECRET=${COOKIE_SECRET:-local-docker-demo-cookie-secret}
+      # Admin console at /r/admin. Log in with this token.
+      - ADMIN_TOKEN=${ADMIN_TOKEN:-local-demo-admin-token}
     volumes:
       - app-data:/app/data
+    # JSON logs, capped at 3 x 10 MB (roughly 100k request lines).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   app-data:

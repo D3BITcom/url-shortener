@@ -41,7 +41,11 @@ if (DEVELOPMENT) {
     "/r/assets",
     express.static("build/client/assets", { immutable: true, maxAge: "1y" }),
   );
-  server.use("/r", express.static("build/client", { maxAge: "1h" }));
+  // redirect: false — let React Router answer /r itself instead of a 301 to /r/.
+  server.use(
+    "/r",
+    express.static("build/client", { maxAge: "1h", redirect: false }),
+  );
   server.use(await import("./build/server/index.js").then((mod) => mod.app));
 }
 
