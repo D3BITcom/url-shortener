@@ -5,9 +5,9 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "scripts": {
-    "build": "tsc",
-    "clean": "rm -rf dist tsconfig.tsbuildinfo .turbo",
-    "dev": "tsc --watch",
+    "clean": "rm -rf .turbo",
+    "dev": "tsc --noEmit --watch --preserveWatchOutput",
+    "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "exports": {
@@ -15,6 +15,11 @@
   },
   "devDependencies": {
     "@types/node": "^22.19.7",
+    "@types/ua-parser-js": "^0.7.39",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "isbot": "^5.1.32",
+    "ua-parser-js": "1.0.41"
   }
 }
