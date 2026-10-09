@@ -4,6 +4,7 @@ import {
   type ClickRepository,
   type ClickStats,
   type GeoResolver,
+  type LeaderboardRow,
   type NewClick,
   type ShortUrl,
 } from "../src";
@@ -19,12 +20,22 @@ const shortUrl: ShortUrl = {
   code: "abcd234",
   targetUrl: "https://example.com/",
   createdAt: new Date("2026-01-01T00:00:00Z"),
+  ownerId: "owner-1",
+  isPublic: false,
+  isCustomSlug: false,
+  hiddenAt: null,
 };
 
 class RecordingClickRepository implements ClickRepository {
   readonly clicks: NewClick[] = [];
   stats: ClickStats = emptyStats();
   lastSinceDay?: string;
+  leaderboardRows: LeaderboardRow[] = [];
+  lastLeaderboardQuery?: {
+    sinceDay: string | null;
+    createdBefore: Date;
+    limit: number;
+  };
 
   async record(click: NewClick) {
     this.clicks.push(click);
@@ -33,6 +44,15 @@ class RecordingClickRepository implements ClickRepository {
   async statsFor(_id: string, { sinceDay }: { sinceDay: string }) {
     this.lastSinceDay = sinceDay;
     return this.stats;
+  }
+
+  async leaderboard(query: {
+    sinceDay: string | null;
+    createdBefore: Date;
+    limit: number;
+  }) {
+    this.lastLeaderboardQuery = query;
+    return this.leaderboardRows;
   }
 }
 
@@ -149,6 +169,55 @@ describe("AnalyticsService.statsFor", () => {
       { day: "2026-10-09", count: 3 },
     ]);
     expect(stats.totalClicks).toBe(5);
+  });
+});
+
+describe("AnalyticsService.leaderboard", () => {
+  it("ranks rows and exposes only the destination domain", async () => {
+    const { clicks, service } = setup();
+    clicks.leaderboardRows = [
+      {
+        code: "launch-day",
+        targetUrl: "https://www.github.com/d3bit/secret-path?token=1",
+        uniqueVisitors: 9,
+      },
+      {
+        code: "gm-night",
+        targetUrl: "https://twitch.tv/d3bit",
+        uniqueVisitors: 4,
+      },
+    ];
+
+    const entries = await service.leaderboard("all");
+
+    expect(entries).toEqual([
+      {
+        rank: 1,
+        code: "launch-day",
+        targetDomain: "github.com",
+        uniqueVisitors: 9,
+      },
+      {
+        rank: 2,
+        code: "gm-night",
+        targetDomain: "twitch.tv",
+        uniqueVisitors: 4,
+      },
+    ]);
+  });
+
+  it("covers the last 7 days for 'week' and skips links younger than an hour", async () => {
+    const { clicks, service } = setup("2026-10-09T12:00:00Z");
+
+    await service.leaderboard("week");
+    expect(clicks.lastLeaderboardQuery).toEqual({
+      sinceDay: "2026-10-03",
+      createdBefore: new Date("2026-10-09T11:00:00Z"),
+      limit: 10,
+    });
+
+    await service.leaderboard("all");
+    expect(clicks.lastLeaderboardQuery?.sinceDay).toBeNull();
   });
 });
 

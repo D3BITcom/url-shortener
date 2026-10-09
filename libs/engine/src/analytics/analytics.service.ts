@@ -11,6 +11,17 @@ import {
 } from "./visit";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+
+export type LeaderboardRange = "week" | "all";
+
+export interface LeaderboardEntry {
+  rank: number;
+  code: string;
+  /** Domain only: the leaderboard must not become a free billboard for full scam URLs. */
+  targetDomain: string;
+  uniqueVisitors: number;
+}
 
 export interface AnalyticsServiceOptions {
   geo: GeoResolver;
@@ -45,6 +56,13 @@ export class AnalyticsService {
     });
   }
 
+  leaderboard(
+    range: LeaderboardRange,
+    limit = 10,
+  ): Promise<LeaderboardEntry[]> {
+    return buildLeaderboard(this.clicks, range, this.now(), limit);
+  }
+
   /** Stats with a continuous `byDay` series (zero-filled) for the last `days` days. */
   async statsFor(shortUrl: ShortUrl, { days = 30 } = {}): Promise<ClickStats> {
     const series = lastNDays(this.now(), days);
@@ -59,6 +77,39 @@ export class AnalyticsService {
     }));
 
     return { ...stats, byDay };
+  }
+}
+
+/**
+ * Abuse guards: only public links (owners opt in), ranked by unique visitors
+ * rather than raw clicks, and only once a link is an hour old, so a fresh
+ * spam link can't bot its way straight to the top before an admin sees it.
+ */
+async function buildLeaderboard(
+  clicks: ClickRepository,
+  range: LeaderboardRange,
+  now: Date,
+  limit = 10,
+): Promise<LeaderboardEntry[]> {
+  const rows = await clicks.leaderboard({
+    sinceDay:
+      range === "week" ? toDay(new Date(now.getTime() - 6 * DAY_MS)) : null,
+    createdBefore: new Date(now.getTime() - HOUR_MS),
+    limit,
+  });
+  return rows.map((row, i) => ({
+    rank: i + 1,
+    code: row.code,
+    targetDomain: domainOf(row.targetUrl),
+    uniqueVisitors: row.uniqueVisitors,
+  }));
+}
+
+function domainOf(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
   }
 }
 

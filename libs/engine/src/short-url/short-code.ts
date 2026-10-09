@@ -1,13 +1,39 @@
 import { randomInt } from "node:crypto";
+import { InvalidSlugError } from "../shared/errors";
 
 /**
  * Base62 without look-alike characters (0/O, 1/I/l), so codes survive being
- * read aloud or retyped. 57^7 ≈ 1.9 trillion combinations: collisions are
- * very rare, and the service retries when one happens.
+ * read aloud or retyped. Codes are unique ignoring case, which still leaves
+ * tens of billions of 7-character combinations; the service retries on the
+ * rare collision.
  */
 export const SHORT_CODE_ALPHABET =
   "23456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
 export const SHORT_CODE_LENGTH = 7;
+
+export const CUSTOM_SLUG_MIN = 4;
+export const CUSTOM_SLUG_MAX = 32;
+
+/**
+ * Paths the app itself uses under /r/, plus a few that would invite
+ * confusion or impersonation. Compared ignoring case.
+ */
+export const RESERVED_SLUGS = new Set([
+  "admin",
+  "api",
+  "assets",
+  "healthz",
+  "help",
+  "key",
+  "login",
+  "logout",
+  "me",
+  "new",
+  "stats",
+  "support",
+  "top",
+  "d3bit",
+]);
 
 export type ShortCodeGenerator = () => string;
 
@@ -25,5 +51,29 @@ export function generateShortCode(length = SHORT_CODE_LENGTH): string {
 
 /** Cheap format check so junk paths never reach the database. */
 export function isWellFormedShortCode(code: string): boolean {
-  return /^[A-Za-z0-9]{4,16}$/.test(code);
+  return /^[A-Za-z0-9_-]{4,32}$/.test(code);
+}
+
+/** The key that uniqueness and lookups use: "ShOrTUr1" and "shorturl1" are the same link. */
+export function codeKey(code: string): string {
+  return code.toLowerCase();
+}
+
+/** @throws InvalidSlugError with a message the user can act on. */
+export function validateCustomSlug(input: string): string {
+  const slug = input.trim();
+  if (slug.length < CUSTOM_SLUG_MIN || slug.length > CUSTOM_SLUG_MAX) {
+    throw new InvalidSlugError(
+      `Custom endings need ${CUSTOM_SLUG_MIN} to ${CUSTOM_SLUG_MAX} characters.`,
+    );
+  }
+  if (!/^[A-Za-z0-9_-]+$/.test(slug)) {
+    throw new InvalidSlugError(
+      "Custom endings can only use letters, numbers, - and _.",
+    );
+  }
+  if (RESERVED_SLUGS.has(codeKey(slug))) {
+    throw new InvalidSlugError("That ending is reserved. Try another one.");
+  }
+  return slug;
 }

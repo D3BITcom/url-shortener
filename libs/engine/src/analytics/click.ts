@@ -42,3 +42,9 @@ export interface ClickStats {
   byDevice: CountByKey[];
   byReferrer: CountByKey[];
 }
+
+export interface LeaderboardRow {
+  code: string;
+  targetUrl: string;
+  uniqueVisitors: number;
+}
