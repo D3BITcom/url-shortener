@@ -150,3 +150,7 @@ data/*
 
 # Generated Prisma client
 **/src/generated/
+
+# Playwright
+**/test-results/
+**/playwright-report/
