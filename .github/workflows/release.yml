@@ -1,0 +1,166 @@
+name: Release
+
+# Every merge to main: run CI, compute the next version from conventional
+# commits (semantic-release), publish the Docker image, deploy to the VPS.
+# Manual run with `version` (re)deploys an existing release, e.g. a rollback.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Existing release to deploy (e.g. v1.2.0). Leave empty for a normal release."
+        required: false
+        default: ""
+
+# Never run two releases/deploys at once; queue them instead.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    if: inputs.version == ''
+    uses: ./.github/workflows/ci.yml
+
+  release:
+    needs: ci
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # tags and GitHub releases
+      issues: write # semantic-release comments on released issues
+      pull-requests: write # ...and PRs
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # semantic-release needs the full history and tags
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      # Config: .releaserc.json. No npm publish, no changelog commit.
+      - run: npx --yes semantic-release@25.0.9
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - id: tag
+        name: Detect the new release
+        # No new tag on HEAD = nothing to release (e.g. only docs/chore commits).
+        run: |
+          if tag=$(git describe --tags --exact-match HEAD 2>/dev/null); then
+            echo "version=$tag" >> "$GITHUB_OUTPUT"
+            echo "Released $tag"
+          else
+            echo "No new release"
+          fi
+
+  image:
+    needs: release
+    if: needs.release.outputs.version != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.release.outputs.version }}
+      - id: name
+        # Registry paths must be lowercase (D3BITcom -> d3bitcom).
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ steps.name.outputs.image }}:${{ needs.release.outputs.version }}
+            ${{ steps.name.outputs.image }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy:
+    needs: [release, image]
+    # Normal path: a new image was published. Manual path: redeploy `version`.
+    if: >-
+      always() &&
+      (needs.image.result == 'success' ||
+       (github.event_name == 'workflow_dispatch' && inputs.version != ''))
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      VERSION: ${{ inputs.version || needs.release.outputs.version }}
+      SSH_TARGET: ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up SSH (host key pinned, no trust-on-first-use)
+        env:
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          printf 'Host *\n  IdentityFile ~/.ssh/deploy_key\n  StrictHostKeyChecking yes\n' > ~/.ssh/config
+
+      - name: Upload the compose file
+        # Variables are meant to expand on the runner side of ssh (SC2029).
+        run: |
+          dir="${DEPLOY_PATH:-url-shortener}"
+          # shellcheck disable=SC2029
+          ssh "$SSH_TARGET" "mkdir -p '$dir'"
+          scp deploy/docker-compose.prod.yml "$SSH_TARGET:$dir/docker-compose.prod.yml"
+
+      - name: Deploy ${{ env.VERSION }} (rolls back if unhealthy)
+        run: |
+          # shellcheck disable=SC2029
+          ssh "$SSH_TARGET" "VERSION='$VERSION' DEPLOY_PATH='${DEPLOY_PATH:-url-shortener}' bash -s" <<'REMOTE'
+          set -eu
+          cd "$DEPLOY_PATH"
+          compose() { APP_VERSION="$1" docker compose -f docker-compose.prod.yml --env-file .env "${@:2}"; }
+          deploy() { compose "$1" pull && compose "$1" up -d; }
+          healthy() {
+            # The image's HEALTHCHECK polls /r/healthz every 30s.
+            for _ in $(seq 1 45); do
+              id=$(compose "$1" ps -q web)
+              status=$(docker inspect -f '{{.State.Health.Status}}' "$id" 2>/dev/null || true)
+              [ "$status" = healthy ] && return 0
+              sleep 2
+            done
+            return 1
+          }
+
+          previous=$(cat .deployed-version 2>/dev/null || true)
+          echo "Deploying $VERSION (previous: ${previous:-none})"
+          deploy "$VERSION"
+          if healthy "$VERSION"; then
+            echo "$VERSION" > .deployed-version
+            docker image prune -f >/dev/null
+            echo "Deployed $VERSION"
+            exit 0
+          fi
+
+          echo "::error::$VERSION is unhealthy"
+          compose "$VERSION" logs --tail 50 web || true
+          if [ -n "$previous" ]; then
+            echo "Rolling back to $previous"
+            deploy "$previous" && healthy "$previous" && echo "Rolled back to $previous"
+          fi
+          exit 1
+          REMOTE
+
+      - name: Check from the internet
+        run: curl -fsS --retry 5 --retry-delay 3 "${PUBLIC_URL:-https://d3b.it}/r/healthz"
+        env:
+          PUBLIC_URL: ${{ vars.PUBLIC_URL }}

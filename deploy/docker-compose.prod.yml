@@ -1,23 +1,34 @@
-# Production on a VPS behind nginx. See deploy/README.md.
-#   docker compose -f deploy/docker-compose.prod.yml --env-file deploy/.env up -d --build
+# Production on the VPS, behind nginx. CI/CD copies this file to the server
+# and runs it with a released image; see deploy/README.md.
+#   APP_VERSION=v1.2.3 docker compose -f docker-compose.prod.yml --env-file .env up -d
 services:
   web:
-    build:
-      context: ..
-      dockerfile: Dockerfile
+    image: ghcr.io/d3bitcom/url-shortener:${APP_VERSION:-latest}
     restart: unless-stopped
     # Loopback only: the app must be reachable through nginx, never directly,
     # otherwise clients could bypass the proxy and spoof X-Forwarded-For.
+    # The health check (GET /r/healthz) comes from the image.
     ports:
       - "127.0.0.1:${HOST_PORT:-3000}:3000"
     environment:
-      - PUBLIC_URL=${PUBLIC_URL:?set PUBLIC_URL, e.g. https://sho.rt}
+      - PUBLIC_URL=${PUBLIC_URL:?set PUBLIC_URL, e.g. https://d3b.it}
       - ANALYTICS_SALT=${ANALYTICS_SALT:?set ANALYTICS_SALT (openssl rand -hex 32)}
+      - COOKIE_SECRET=${COOKIE_SECRET:?set COOKIE_SECRET (openssl rand -hex 32)}
+      - ADMIN_TOKEN=${ADMIN_TOKEN:?set ADMIN_TOKEN (openssl rand -hex 24)}
+      - TURNSTILE_SITE_KEY=${TURNSTILE_SITE_KEY:-}
+      - TURNSTILE_SECRET_KEY=${TURNSTILE_SECRET_KEY:-}
       - TRUST_PROXY=true
+      - LOG_LEVEL=${LOG_LEVEL:-info}
       - RATE_LIMIT_MAX=${RATE_LIMIT_MAX:-10}
       - RATE_LIMIT_WINDOW_SECONDS=${RATE_LIMIT_WINDOW_SECONDS:-60}
     volumes:
       - app-data:/app/data
+    # JSON logs, capped at 3 x 10 MB (roughly 100k request lines).
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   app-data:

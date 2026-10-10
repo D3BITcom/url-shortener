@@ -1,10 +1,11 @@
-# /etc/nginx/sites-available/url-shortener
-# TLS certificates via certbot: sudo certbot --nginx -d your-domain.example
+# d3b.it: everything keeps redirecting to d3bit.com, except /r, which is the
+# URL shortener. Merge these locations into the existing d3b.it server block.
+# TLS via certbot: sudo certbot --nginx -d d3b.it
 
 server {
     listen 80;
     listen [::]:80;
-    server_name your-domain.example;
+    server_name d3b.it;
     return 301 https://$host$request_uri;
 }
 
@@ -12,23 +13,25 @@ server {
     listen 443 ssl;
     listen [::]:443 ssl;
     http2 on;
-    server_name your-domain.example;
+    server_name d3b.it;
 
     # Managed by certbot
-    ssl_certificate     /etc/letsencrypt/live/your-domain.example/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.example/privkey.pem;
+    ssl_certificate     /etc/letsencrypt/live/d3b.it/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/d3b.it/privkey.pem;
 
-    # The app only accepts small form posts; reject anything bigger early.
-    client_max_body_size 16k;
+    # The URL shortener: d3b.it/r and d3b.it/r/...
+    location = /r {
+        include /etc/nginx/snippets/url-shortener-proxy.conf;
+    }
+    location /r/ {
+        include /etc/nginx/snippets/url-shortener-proxy.conf;
+    }
 
+    # Everything else: unchanged.
     location / {
-        proxy_pass http://127.0.0.1:3000;   # HOST_PORT from deploy/.env
-        proxy_http_version 1.1;
-        proxy_set_header Host $host;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        # nginx appends the real client address. The app trusts exactly one
-        # hop (TRUST_PROXY=true), so it reads this appended value and ignores
-        # anything a client put in the header itself.
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        return 301 https://d3bit.com$request_uri;
     }
 }
+
+# The shared proxy settings are in deploy/url-shortener-proxy.conf; copy it to
+# /etc/nginx/snippets/url-shortener-proxy.conf.
