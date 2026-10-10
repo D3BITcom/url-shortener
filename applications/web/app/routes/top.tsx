@@ -30,7 +30,7 @@ export default function Leaderboard() {
   const { range, entries } = useLoaderData<typeof loader>();
 
   return (
-    <div className="mx-auto flex max-w-[860px] flex-col gap-7">
+    <div className="mx-auto flex w-full max-w-[860px] flex-col gap-7">
       <div className="flex flex-col items-center gap-3.5 text-center">
         <h1 className="wavy -rotate-1 border-4 border-ink bg-paper px-5 py-1.5 text-4xl font-bold text-fuchsia italic shadow-hard-lg sm:text-5xl">
           ~ Hall of Fame ~

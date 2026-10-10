@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Form, useNavigation } from "react-router";
 import { ErrorAlert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -24,6 +24,7 @@ export function ShortenForm({
   shortLinkPrefix: string;
 }) {
   const submitting = useNavigation().state === "submitting";
+  const [isPublic, setIsPublic] = useState(fields?.isPublic ?? false);
   const urlRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -34,7 +35,7 @@ export function ShortenForm({
   }, [error]);
 
   return (
-    <PaperCard className="mx-auto max-w-[640px]">
+    <PaperCard className="mx-auto my-auto w-full max-w-[640px]">
       <h1 className="wavy text-center text-3xl leading-snug font-bold tracking-wide text-fuchsia italic sm:text-4xl">
         ~*~ URL Shortener ~*~
       </h1>
@@ -75,18 +76,25 @@ export function ShortenForm({
           />
         </div>
 
-        <div className="flex items-center gap-3.5 border-[3px] border-ink bg-white p-3 shadow-hard">
+        <div className="flex items-start gap-3.5 border-[3px] border-ink bg-white p-4 shadow-hard">
           <input
             id="isPublic"
             name="isPublic"
             type="checkbox"
-            defaultChecked={fields?.isPublic}
-            className="size-6 flex-none accent-fuchsia"
+            checked={isPublic}
+            onChange={(e) => setIsPublic(e.target.checked)}
+            className="mt-0.5 size-7 flex-none accent-fuchsia"
           />
-          <label htmlFor="isPublic" className="text-[15px] font-bold">
-            Public stats{" "}
-            <span className="font-normal">(eligible for the Top 10)</span>
-          </label>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="isPublic" className="text-[15px] font-bold">
+              Show on the public leaderboard
+            </label>
+            <span className="text-[13px] leading-relaxed">
+              {isPublic
+                ? "Anyone can see this link's stats and it can appear in the Top 10."
+                : "Private: only you can see its stats, through your secret lobby link."}
+            </span>
+          </div>
         </div>
 
         {/* Honeypot: hidden from people, but naive bots fill every field. */}

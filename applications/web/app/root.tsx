@@ -38,7 +38,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body className="flex flex-col">
         <SiteHeader />
-        <main className="mx-auto w-full max-w-[1100px] flex-1 px-4 pt-6 pb-6">
+        <main className="mx-auto flex w-full max-w-[1100px] flex-1 flex-col px-4 pt-6 pb-6">
           {children}
         </main>
         <SiteFooter />
@@ -122,7 +122,7 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   }
 
   return (
-    <PaperCard className="mx-auto flex max-w-xl flex-col items-center gap-5 text-center">
+    <PaperCard className="mx-auto flex w-full max-w-xl flex-col items-center gap-5 text-center">
       <h1 className="wavy text-3xl font-bold text-fuchsia italic">{title}</h1>
       <p>{details}</p>
       <Button asChild variant="white">

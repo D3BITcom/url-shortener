@@ -24,7 +24,7 @@ export function ShortenResult({
   newOwner: boolean;
 }) {
   return (
-    <div className="mx-auto flex max-w-[680px] flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-[680px] flex-col gap-5">
       <h1 className="rotate-1 border-4 border-ink bg-paper px-5 py-1.5 text-center text-3xl font-bold italic shadow-[8px_8px_0_var(--color-grape)]">
         IT'S ALIVE!
       </h1>

@@ -175,7 +175,7 @@ export default function MyLinks() {
 
 function NoOwner() {
   return (
-    <div className="mx-auto flex max-w-[640px] flex-col gap-7">
+    <div className="mx-auto flex w-full max-w-[640px] flex-col gap-7">
       <h1 className="-rotate-1 self-start border-4 border-ink bg-paper px-4 py-1 text-4xl font-bold italic shadow-[6px_6px_0_var(--color-grape)]">
         My links
       </h1>
