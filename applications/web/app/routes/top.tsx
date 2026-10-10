@@ -1,7 +1,6 @@
 import type { LeaderboardRange } from "@url-shortener/engine";
 import { Link, useLoaderData } from "react-router";
 import { getContainer } from "~/.server/container";
-import { Notice } from "~/components/ui/alert";
 import { Counter } from "~/components/ui/counter";
 import { cn } from "~/lib/utils";
 import type { Route } from "./+types/top";
@@ -36,9 +35,6 @@ export default function Leaderboard() {
         <h1 className="wavy -rotate-1 border-4 border-ink bg-paper px-5 py-1.5 text-4xl font-bold text-fuchsia italic shadow-hard-lg sm:text-5xl">
           ~ Hall of Fame ~
         </h1>
-        <p className="border-2 border-ink bg-white px-3 py-1 text-sm">
-          The most-visited public links. Ranked by unique visitors.
-        </p>
       </div>
 
       {/* Plain links, not JS tabs: shareable URLs, works without JavaScript. */}
@@ -96,10 +92,10 @@ export default function Leaderboard() {
         </ol>
       )}
 
-      <Notice className="text-center">
-        Only links their owners chose to make public. Destinations show the
-        domain only. New links appear after one hour.
-      </Notice>
+      <p className="text-center text-xs">
+        Public links only, ranked by unique visitors. New links show up after an
+        hour.
+      </p>
     </div>
   );
 }

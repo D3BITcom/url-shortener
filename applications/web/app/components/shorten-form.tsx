@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { Form, useNavigation } from "react-router";
 import { ErrorAlert } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
@@ -24,7 +24,6 @@ export function ShortenForm({
   shortLinkPrefix: string;
 }) {
   const submitting = useNavigation().state === "submitting";
-  const [isPublic, setIsPublic] = useState(fields?.isPublic ?? false);
   const urlRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -39,13 +38,7 @@ export function ShortenForm({
       <h1 className="wavy text-center text-3xl leading-snug font-bold tracking-wide text-fuchsia italic sm:text-4xl">
         ~*~ URL Shortener ~*~
       </h1>
-      <p className="mt-5 mb-8 text-center text-[15px] leading-relaxed">
-        Paste a long link. Get a short one.
-        <br />
-        Watch the clicks roll in.
-      </p>
-
-      <Form method="post" className="flex flex-col gap-6">
+      <Form method="post" className="mt-6 flex flex-col gap-5">
         <div className="flex flex-col gap-2">
           <Label htmlFor="url">Long URL</Label>
           <Input
@@ -78,32 +71,22 @@ export function ShortenForm({
             placeholder="ShOrTUr1"
             maxLength={32}
             defaultValue={fields?.slug}
-            aria-describedby="slug-hint"
+            title="4-32 letters, numbers, - or _"
           />
-          <p id="slug-hint" className="text-[13px]">
-            4 or more letters, numbers, - or _. Leave it empty for a random one.
-          </p>
         </div>
 
-        <div className="flex items-start gap-3.5 border-[3px] border-ink bg-white p-4 shadow-hard">
+        <div className="flex items-center gap-3.5 border-[3px] border-ink bg-white p-3 shadow-hard">
           <input
             id="isPublic"
             name="isPublic"
             type="checkbox"
-            checked={isPublic}
-            onChange={(e) => setIsPublic(e.target.checked)}
-            className="mt-0.5 size-7 flex-none accent-fuchsia"
+            defaultChecked={fields?.isPublic}
+            className="size-6 flex-none accent-fuchsia"
           />
-          <div className="flex flex-col gap-1">
-            <label htmlFor="isPublic" className="text-[15px] font-bold">
-              Show on the public leaderboard
-            </label>
-            <span className="text-[13px] leading-relaxed">
-              {isPublic
-                ? "Anyone can see this link's stats and it can appear in the Top 10."
-                : "Private: only you can see its stats, through your secret lobby link."}
-            </span>
-          </div>
+          <label htmlFor="isPublic" className="text-[15px] font-bold">
+            Public stats{" "}
+            <span className="font-normal">(eligible for the Top 10)</span>
+          </label>
         </div>
 
         {/* Honeypot: hidden from people, but naive bots fill every field. */}

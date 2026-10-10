@@ -2,7 +2,6 @@ import { Form, Link, redirect, useLoaderData } from "react-router";
 import { getContainer } from "~/.server/container";
 import { getViewer } from "~/.server/session";
 import { CopyButton } from "~/components/copy-button";
-import { Notice } from "~/components/ui/alert";
 import { VisibilityBadge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Counter } from "~/components/ui/counter";
@@ -67,9 +66,6 @@ export default function MyLinks() {
           <h1 className="-rotate-1 border-4 border-ink bg-paper px-4 py-1 text-4xl font-bold italic shadow-[6px_6px_0_var(--color-grape)]">
             My links
           </h1>
-          <p className="border-2 border-ink bg-white px-2.5 py-1 text-sm">
-            Remembered in this browser. Lost it? Use your secret lobby link.
-          </p>
         </div>
         <div className="flex flex-wrap gap-3">
           <CopyButton
@@ -185,10 +181,7 @@ function NoOwner() {
       </h1>
       <Window title="WHO_ARE_YOU.TXT" tone="hot">
         <div className="flex flex-col gap-4 p-6">
-          <p>
-            This browser doesn't know you yet. Your links appear here after you
-            shorten one, or when you open your secret lobby link.
-          </p>
+          <p>This browser doesn't know you yet.</p>
           <Form method="get" className="flex flex-col gap-2">
             <Label htmlFor="key">Paste your secret link</Label>
             <div className="flex flex-wrap gap-3">
@@ -207,10 +200,6 @@ function NoOwner() {
           </Form>
         </div>
       </Window>
-      <Notice>
-        No account needed: whoever has the secret link owns the links. Signing
-        in with D3BIT is coming soon.
-      </Notice>
       <Button asChild variant="white" className="self-start">
         <Link to="/">← Shorten a URL</Link>
       </Button>

@@ -7,7 +7,6 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useNavigation,
 } from "react-router";
 import { Button } from "~/components/ui/button";
 import { PaperCard } from "~/components/ui/window";
@@ -39,7 +38,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </head>
       <body className="flex flex-col">
         <SiteHeader />
-        <main className="mx-auto w-full max-w-[1100px] flex-1 px-4 pt-10 pb-16">
+        <main className="mx-auto w-full max-w-[1100px] flex-1 px-4 pt-6 pb-6">
           {children}
         </main>
         <SiteFooter />
@@ -61,10 +60,8 @@ const NAV = [
 ];
 
 function SiteHeader() {
-  const navigation = useNavigation();
-
   return (
-    <header className="mx-auto w-full max-w-[1100px] px-4 pt-6">
+    <header className="mx-auto w-full max-w-[1100px] px-4 pt-5">
       <div className="flex flex-wrap items-center justify-between gap-5">
         <Link
           to="/"
@@ -91,62 +88,18 @@ function SiteHeader() {
           ))}
         </nav>
       </div>
-      <Ticker loading={navigation.state === "loading"} />
     </header>
   );
 }
 
-const TICKER =
-  "★ SHORT LINKS ★ REAL STATS ★ NO RAW IPs STORED ★ BOTS DON'T COUNT ★ PRIVATE BY DEFAULT ";
-
-function Ticker({ loading }: { loading: boolean }) {
-  return (
-    <div
-      aria-hidden
-      className="mt-7 overflow-hidden border-[3px] border-ink bg-ink py-1 font-pixel text-2xl whitespace-nowrap text-lime-soft"
-    >
-      <div className="inline-block animate-[ticker_30s_linear_infinite]">
-        {loading
-          ? "★ LOADING... ★ LOADING... ★ LOADING... ★ LOADING... "
-          : TICKER}
-        {loading
-          ? "★ LOADING... ★ LOADING... ★ LOADING... ★ LOADING... "
-          : TICKER}
-      </div>
-    </div>
-  );
-}
-
-const BADGES = [
-  { label: "NO RAW IPs", className: "bg-ink text-lime-soft border-lime" },
-  { label: "BOT FREE", className: "bg-fuchsia text-white border-lilac" },
-  { label: "SQLITE INSIDE", className: "bg-blue text-white border-cyan" },
-  { label: "ANY BROWSER OK", className: "bg-paper text-ink border-white" },
-];
-
 function SiteFooter() {
   return (
-    <footer className="mx-auto flex w-full max-w-[1100px] flex-col items-center gap-4 px-4 pb-10">
-      <ul className="flex flex-wrap justify-center gap-2.5">
-        {BADGES.map((badge) => (
-          <li
-            key={badge.label}
-            className={cn(
-              "flex h-[31px] w-[88px] items-center justify-center border-2 [border-style:outset] text-center font-pixel text-[15px] leading-none",
-              badge.className,
-            )}
-          >
-            {badge.label}
-          </li>
-        ))}
-      </ul>
-      <p className="bg-white px-2 text-xs">
-        IP geolocation by{" "}
-        <a href="https://db-ip.com" className="text-ink">
-          DB-IP
-        </a>{" "}
-        (CC BY 4.0). Raw IP addresses are never stored.
-      </p>
+    <footer className="px-4 pb-4 text-center text-xs">
+      Geolocation by{" "}
+      <a href="https://db-ip.com" className="text-ink">
+        DB-IP
+      </a>{" "}
+      (CC BY 4.0)
     </footer>
   );
 }
