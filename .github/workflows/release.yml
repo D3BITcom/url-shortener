@@ -25,6 +25,11 @@ jobs:
   ci:
     if: inputs.version == ''
     uses: ./.github/workflows/ci.yml
+    # A called workflow can't ask for more than the caller grants, even for
+    # jobs it skips (ci.yml's pr-title job reads pull requests).
+    permissions:
+      contents: read
+      pull-requests: read
 
   release:
     needs: ci
