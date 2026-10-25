@@ -1,5 +1,6 @@
-# Node 22 LTS (Node 20 reached end-of-life in April 2026).
-FROM node:22-alpine AS base
+# Node 22 LTS (Node 20 reached end-of-life in April 2026). Pinned to an exact
+# release so a security fix always produces a new image (bump it by hand).
+FROM node:22.23.4-alpine AS base
 RUN corepack enable && corepack prepare pnpm@10.20.0 --activate
 WORKDIR /app
 
